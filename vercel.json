@@ -1,15 +1,17 @@
 {
     "version": 2,
-    "builds": [
-      {
-        "src": "api/*.js",
-        "use": "@vercel/node"
+    "functions": {
+      "api/fetchAccount.ts": {
+        "maxDuration": 30
+      },
+      "api/createKyc.ts": {
+        "maxDuration": 30
       }
-    ],
-    "routes": [
+    },
+    "rewrites": [
       {
-        "src": "/api/(.*)",
-        "dest": "/api/$1"
+        "source": "/(.*)",
+        "destination": "/api"
       }
     ]
   }

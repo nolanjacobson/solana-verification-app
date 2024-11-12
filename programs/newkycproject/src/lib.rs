@@ -21,7 +21,7 @@ pub mod newkycproject {
         let expected_program_owner =
         Pubkey::from_str("FVS8JXE4CGdNfMAmkYCCJeMGErdjNJX71c1iNfGcZomT")
             .map_err(|_| ProgramError::InvalidArgument)?;
-        require_keys_eq!(ctx.accounts.user.key(), expected_program_owner);
+        require_keys_eq!(ctx.accounts.program_owner.key(), expected_program_owner);
 
         msg!("user Intro Account Created");
         msg!("isVerified: {}", is_verified);
@@ -77,15 +77,15 @@ pub struct AddState<'info> {
         init,
         seeds = [user.key().as_ref()],
         bump,
-        payer = user,
+        payer = program_owner,
         space = 8 + 66,
     )]
     pub user_info: AccountLoader<'info, UserInfo>,
+    /// CHECK: This is not dangerous because we are only checking the key
+    pub user: AccountInfo<'info>, // Ensure this is not marked as a Signer
     #[account(mut)]
-    pub user: Signer<'info>,
+    pub program_owner: Signer<'info>, // This should be the only signer
     pub system_program: Program<'info, System>,
-        /// CHECK: This is not dangerous because we are only checking the key
-        pub program_owner: AccountInfo<'info>,
 }
 
 #[derive(Accounts)]
@@ -100,11 +100,12 @@ pub struct UpdateState<'info> {
         realloc::zero = false,
     )]
     pub user_info: AccountLoader<'info, UserInfo>,
-    #[account(mut)]
-    pub user: Signer<'info>,
-    pub system_program: Program<'info, System>,
-        /// CHECK: This is not dangerous because we are only checking the key
-        pub program_owner: AccountInfo<'info>,
+    /// CHECK: This is not dangerous because we are only checking the key
+    #[account(mut)] // Mark user as mutable
+    pub user: AccountInfo<'info>, // Ensure this is not marked as a Signer
+    /// CHECK: This is not dangerous because we are only checking the key
+    pub program_owner: AccountInfo<'info>,
+    pub system_program: Program<'info, System>, // Correctly specify the system program
 }
 
 #[derive(Accounts)]
