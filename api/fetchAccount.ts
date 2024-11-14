@@ -10,6 +10,16 @@ const programId = new PublicKey("EFCNdFXKnbcoHZJEQpmKrePsCYYPeMhPoAuAtaoPNy92");
 const coder = new BorshCoder(idl as Idl);
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    // Preflight request
+    res.status(200).end();
+    return;
+  }
+
   const { address } = req.query;
 
   if (!address || Array.isArray(address)) {
@@ -22,6 +32,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       [publicKey.toBuffer()],
       programId
     );
+
+    console.log("stateAccount", stateAccount);
 
     const connection = new Connection(
       "https://api.devnet.solana.com",
@@ -37,7 +49,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const decodedData = coder.accounts.decode("UserInfo", accountInfo.data);
 
     res.status(200).json({ accountData: decodedData });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 }
