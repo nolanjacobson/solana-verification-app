@@ -100,16 +100,16 @@ pub struct UpdateState<'info> {
         seeds = [user.key().as_ref()],
         bump = user_info.load()?.bump,
         realloc = 8 + UserInfo::INIT_SPACE,
-        realloc::payer = user,
+        realloc::payer = program_owner,  // Changed from user to program_owner
         realloc::zero = false,
     )]
     pub user_info: AccountLoader<'info, UserInfo>,
     /// CHECK: This is not dangerous because we are only checking the key
-    #[account(mut)] // Mark user as mutable
-    pub user: AccountInfo<'info>, // Ensure this is not marked as a Signer
+    pub user: AccountInfo<'info>,  // Removed mut
     /// CHECK: This is not dangerous because we are only checking the key
-    pub program_owner: AccountInfo<'info>,
-    pub system_program: Program<'info, System>, // Correctly specify the system program
+    #[account(mut)]
+    pub program_owner: Signer<'info>,  // Changed to Signer and added mut
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]

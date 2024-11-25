@@ -32,16 +32,13 @@ function stringToUint8Array32(str: string): Uint8Array {
 }
 
 const payer = Keypair.fromSecretKey(
-  Uint8Array.from([
-    149, 141, 172, 154, 21, 39, 234, 181, 113, 236, 49, 254, 208, 158, 161, 208,
-    156, 203, 223, 72, 22, 181, 106, 112, 172, 91, 139, 231, 116, 162, 2, 231,
-    215, 76, 74, 33, 8, 183, 4, 129, 181, 59, 54, 120, 12, 85, 244, 44, 12, 56,
-    101, 216, 149, 218, 119, 121, 69, 77, 157, 224, 216, 68, 56, 26,
-  ])
+  Uint8Array.from(
+    [149,141,172,154,21,39,234,181,113,236,49,254,208,158,161,208,156,203,223,72,22,181,106,112,172,91,139,231,116,162,2,231,215,76,74,33,8,183,4,129,181,59,54,120,12,85,244,44,12,56,101,216,149,218,119,121,69,77,157,224,216,68,56,26]
+  )
 );
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const { address, mtid } = req.query;
+  const { address, transaction_hash, grade } = req.query;
 
   if (!address || Array.isArray(address)) {
     return res.status(400).json({ error: "A single address is required" });
@@ -59,7 +56,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       "confirmed"
     );
 
-    const mtidBytes = stringToUint8Array32(mtid as string);
+    const transactionHashBytes = stringToUint8Array32(
+      transaction_hash as string
+    );
+
+    const gradeBytes = Buffer.from([Number(grade as string)]);
 
     try {
       // Attempt to add state
@@ -78,7 +79,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         data: Buffer.concat([
           getInstructionIdentifier("global:add_state"), // 8-byte identifier
           Buffer.from([1]), // Serialize is_verified as a single byte
-          Buffer.from(mtidBytes), // Serialize mtid as a 32-byte array
+          Buffer.from(transactionHashBytes), // Serialize mtid as a 32-byte array
+          gradeBytes,
         ]),
       });
 
@@ -96,9 +98,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           // Fallback to update state
           const updateStateIx = new TransactionInstruction({
             keys: [
-              { pubkey: stateAccount, isSigner: false, isWritable: true },
-              { pubkey: publicKey, isSigner: false, isWritable: true }, // user account
-              { pubkey: payer.publicKey, isSigner: false, isWritable: false }, // program owner key
+              {
+                pubkey: stateAccount, // Make sure this PDA is derived correctly
+                isSigner: false,
+                isWritable: true,
+              },
+              {
+                pubkey: publicKey, // This is the user's address
+                isSigner: false,
+                isWritable: false,
+              },
+              {
+                pubkey: payer.publicKey,
+                isSigner: true,
+                isWritable: true,
+              },
               {
                 pubkey: SystemProgram.programId,
                 isSigner: false,
@@ -108,8 +122,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             programId: programId,
             data: Buffer.concat([
               getInstructionIdentifier("global:update_state"), // 8-byte identifier
-              Buffer.from([1]), // Serialize boolean as a single byte
-              Buffer.from(mtidBytes), // Serialize mtid as a 32-byte array
+              Buffer.from([1]), // Serialize is_verified as a single byte
+              Buffer.from(transactionHashBytes), // Serialize mtid as a 32-byte array
+              gradeBytes,
             ]),
           });
 
